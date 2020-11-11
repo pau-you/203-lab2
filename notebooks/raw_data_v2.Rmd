@@ -1,0 +1,67 @@
+---
+title: "lab 2 cleanup"
+author: "Joshua Lin"
+date: "November 9, 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+options(tinytex.verbose = TRUE)
+```
+
+```{r}
+install.packages("xlsx")
+```
+
+```{r, warning=FALSE}
+library('readxl')
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(janitor)
+library(xlsx)
+```
+
+```{r, warning=FALSE}
+data = read_excel('add_shelter_length (2).xlsx', sheet = 2,
+                  col_names = TRUE)
+#data$`State of emergency` <- lubridate::as_date(data$`State of emergency`)
+#data$`Stay at home/ shelter in place` <- lubridate::as_date(data$`Stay at home/ shelter in place`)
+data = data %>%
+  rename(
+    percent_risk_serious = 'percent_ risk_ serious_ illness_due_to_covid',
+    mandate_facemask = 'mandate_facemask_use_ employees _ public',
+    length_shelter_in_place = 'length_ shelter_in_place', 
+     shelter_in_place = 'stay_ at_ home_ shelter_in_ place',
+    end_relax_shelter_in_place = end_relax_stay_at_home_shelter_in_place)
+data$shelter_in_place = excel_numeric_to_date(data$shelter_in_place)
+data$end_relax_shelter_in_place = excel_numeric_to_date(data$end_relax_shelter_in_place)
+data$closed_nonessential_businesses = excel_numeric_to_date(data$closed_nonessential_businesses)
+data$began_reopen_businesses_statewide = excel_numeric_to_date(data$began_reopen_businesses_statewide)
+data$mandate_facemask = excel_numeric_to_date(data$mandate_facemask)
+#Values where year is 1899 indicates that the state didn't end or enact shelter in place
+data
+```
+
+```{r}
+data <- data %>% 
+  mutate(percent_cases = (total_cases/population_2018)*100)
+```
+
+```{r}
+write.xlsx(data, "covid_data.xlsx")
+```
+
+```{r}
+baseline_lm <- lm(percent_cases ~ length_shelter_in_place, data=data)
+summary(baseline_lm)
+```
+
+```{r}
+plot(data$total_test_results, data$percent_cases)
+```
