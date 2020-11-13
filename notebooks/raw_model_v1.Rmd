@@ -1,0 +1,62 @@
+---
+title: "raw_data_v3"
+output: pdf_document
+author: Gogurt (Hannah, Jeff, Josh Lin, Pauline)
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "../reports/") })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+```
+
+
+```{r, warning = FALSE}
+d <- read_excel("../data/interim/covid-19_v1.xlsx", sheet = "Covid-19", skip=1)
+```
+```{r}
+#changing dates 
+d$shelter_in_place = excel_numeric_to_date(d$shelter_in_place)
+d$end_shelter_in_place = excel_numeric_to_date(d$end_shelter_in_place)
+d$close_nonessential_business = excel_numeric_to_date(d$close_nonessential_business)
+d$reopen_business_statewide = excel_numeric_to_date(d$reopen_business_statewide)
+d$mandate_facemask = excel_numeric_to_date(d$mandate_facemask)
+d$mandate_facemask_employee = excel_numeric_to_date(d$mandate_facemask_employee)
+d$end_statewide_mandate_facemask = excel_numeric_to_date(d$end_statewide_mandate_facemask)
+
+```
+
+
+```{r}
+write_csv(d, file = "../data/interim/covid-19_v1.csv")
+d
+```
+```{r}
+d <- d %>% mutate(percent_cases = (total_cases / population_2018) * 100)
+d
+```
+```{r}
+plot(sqrt(d$`length_ shelter_in_place`), d$percent_cases)
+```
+```{r}
+d <- d %>% mutate(root_length_shelter = sqrt(`length_ shelter_in_place`))
+model_1 <- lm(percent_cases ~ root_length_shelter, data=d)
+summary(model_1)
+```
+```{r}
+model_2 <- lm(percent_cases ~ root_length_shelter + political_party_governor, data=d)
+summary(model_2)
+```
+
+
+
+
+
