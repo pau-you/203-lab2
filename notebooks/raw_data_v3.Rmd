@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(readxl)
 library(janitor)
