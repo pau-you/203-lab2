@@ -43,24 +43,31 @@ d$end_statewide_mandate_facemask = excel_numeric_to_date(d$end_statewide_mandate
 ```{r}
 total$reopen_restaurants = excel_numeric_to_date(total$reopen_restaurants)
 total$reopen_childcare = excel_numeric_to_date(total$reopen_childcare)
-#total$reopen_business_statewide = excel_numeric_to_date(total$reopen_business_statewide)
+total$reopen_business_statewide = excel_numeric_to_date(as.numeric(total$reopen_business_statewide))
 total$reopen_gyms = excel_numeric_to_date(total$reopen_gyms)
 total$reopen_hair_salons = excel_numeric_to_date(total$reopen_hair_salons)
 total$reopen_movie_theaters = excel_numeric_to_date(total$reopen_movie_theaters)
 total$`reopen_non-essential_retail` = excel_numeric_to_date(total$`reopen_non-essential_retail`)
 total$reopen_religious = excel_numeric_to_date(total$reopen_religious)
-total$reopen_state_bus = excel_numeric_to_date(total$reopen_state_bus)
+total$reopen_state_bus = excel_numeric_to_date(as.numeric(total$reopen_state_bus))
+total$reopen_bars = excel_numeric_to_date(total$reopen_bars)
 ```
 
-```{r}
-reopen_date <- apply(total[71:75], 1, excel_numeric_to_date)
-```
+
 
 
 ```{r}
 write_csv(d, file = "../data/interim/covid-19_v1.csv")
 d
 ```
+
+```{r}
+write_csv(total, file = "../data/interim/covid19+cusp.csv")
+total
+```
+
+
+
 ```{r}
 d <- d %>% mutate(percent_cases = (total_cases / population_2018) * 100)
 d
@@ -132,5 +139,10 @@ summary(model_5)
 ```{r}
 model_6 <- lm(percent_cases ~ root_length_shelter + weekly_max_ui_w_stimulus + percent_unemployed_2018 + (weekly_max_ui_w_stimulus * percent_unemployed_2018), data = d)
 summary(model_6)
+```
+
+```{r}
+new_model <- lm(percent_cases ~ `length_ shelter_in_place` + root_length_shelter + length_gym, data = total)
+summary(new_model)
 ```
 
