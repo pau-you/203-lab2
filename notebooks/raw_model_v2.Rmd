@@ -1,0 +1,136 @@
+---
+title: "raw_data_v3"
+output: pdf_document
+author: Gogurt (Hannah, Jeff, Josh Lin, Pauline)
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "../reports/") })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+```
+
+
+```{r, warning = FALSE}
+d <- read_excel("../data/interim/covid-19_v1.xlsx", sheet = "Covid-19", skip=1)
+```
+```{r, warning=FALSE}
+reopen <- read_excel("../data/interim/reopen_CUSP.xlsx", sheet = "Reopening")
+total <- merge(d,reopen, by="state")
+```
+
+
+```{r}
+#changing dates 
+d$shelter_in_place = excel_numeric_to_date(d$shelter_in_place)
+d$end_shelter_in_place = excel_numeric_to_date(d$end_shelter_in_place)
+d$close_nonessential_business = excel_numeric_to_date(d$close_nonessential_business)
+d$reopen_business_statewide = excel_numeric_to_date(d$reopen_business_statewide)
+d$mandate_facemask = excel_numeric_to_date(d$mandate_facemask)
+d$mandate_facemask_employee = excel_numeric_to_date(d$mandate_facemask_employee)
+d$end_statewide_mandate_facemask = excel_numeric_to_date(d$end_statewide_mandate_facemask)
+
+```
+
+```{r}
+total$reopen_restaurants = excel_numeric_to_date(total$reopen_restaurants)
+total$reopen_childcare = excel_numeric_to_date(total$reopen_childcare)
+#total$reopen_business_statewide = excel_numeric_to_date(total$reopen_business_statewide)
+total$reopen_gyms = excel_numeric_to_date(total$reopen_gyms)
+total$reopen_hair_salons = excel_numeric_to_date(total$reopen_hair_salons)
+total$reopen_movie_theaters = excel_numeric_to_date(total$reopen_movie_theaters)
+total$`reopen_non-essential_retail` = excel_numeric_to_date(total$`reopen_non-essential_retail`)
+total$reopen_religious = excel_numeric_to_date(total$reopen_religious)
+total$reopen_state_bus = excel_numeric_to_date(total$reopen_state_bus)
+```
+
+```{r}
+reopen_date <- apply(total[71:75], 1, excel_numeric_to_date)
+```
+
+
+```{r}
+write_csv(d, file = "../data/interim/covid-19_v1.csv")
+d
+```
+```{r}
+d <- d %>% mutate(percent_cases = (total_cases / population_2018) * 100)
+d
+```
+```{r}
+plot(sqrt(d$`length_ shelter_in_place`), d$percent_cases)
+```
+```{r}
+d <- d %>% mutate(root_length_shelter = sqrt(`length_ shelter_in_place`))
+model_1 <- lm(percent_cases ~ root_length_shelter, data=d)
+summary(model_1)
+```
+```{r}
+model_2 <- lm(percent_cases ~ root_length_shelter + political_party_governor, data=d)
+summary(model_2)
+```
+
+```{r}
+model_3 <- lm(percent_cases ~ root_length_shelter + political_party_governor + (political_party_governor * root_length_shelter), data = d)
+summary(model_3)
+```
+
+```{r}
+model_4 <- lm(percent_cases ~ root_length_shelter + no_enforcement_facemask, data = d)
+summary(model_4)
+```
+
+```{r}
+model_5 <- lm(percent_cases ~ root_length_shelter + no_enforcement_facemask + (root_length_shelter * no_enforcement_facemask), data = d)
+summary(model_5)
+```
+```{r}
+hist(d$no_enforcement_facemask)
+
+
+counts <- table(d$no_enforcement_facemask, d$total_cases)
+par(mar=c(8,4,4,4))
+barplot(counts, main="Enforcement of Facemask",
+        ylab = 'Total Cases',
+        names.arg=c('Did not Enforce', 'Enforced'))
+        
+        #legend = c('Male', 'Female'))
+counts
+```
+
+```{r}
+histogram_of_facemask_mandate <- d %>%
+  ggplot(aes(x = factor(no_enforcement_facemask), y = percent_cases)) + geom_bar(stat = 'identity') 
+histogram_of_facemask_mandate
+
+```
+
+```{r}
+model_6 <- lm(percent_cases ~ root_length_shelter + nonelderly_preexisting_cond, data = d)
+summary(model_6)
+```
+
+
+
+```{r}
+plot((d$weekly_max_ui_w_stimulus), d$percent_cases)
+```
+
+```{r}
+model_5 <- lm(percent_cases ~ root_length_shelter + weekly_max_ui_w_stimulus + percent_unemployed_2018, data = d)
+summary(model_5)
+```
+
+```{r}
+model_6 <- lm(percent_cases ~ root_length_shelter + weekly_max_ui_w_stimulus + percent_unemployed_2018 + (weekly_max_ui_w_stimulus * percent_unemployed_2018), data = d)
+summary(model_6)
+```
+
