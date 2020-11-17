@@ -11,11 +11,19 @@ knit: (function(inputFile, encoding) {
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+install.packages('stargazer')
+```
+
+
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(readxl)
 library(janitor)
 library(ggplot2)
+library(sandwich)
+library(lmtest)
+library(stargazer)
 ```
 
 ```{r, warning = FALSE}
@@ -63,23 +71,18 @@ total <- total %>% mutate(root_length_shelter = sqrt(`length_ shelter_in_place`)
 plot(total$root_length_shelter, total$cases_per_100k)
 ```
 ```{r}
-#baseline model
-model1 <- lm(cases_per_100k ~ `length_ shelter_in_place`, data = total)
-summary(model1)
-```
-```{r}
-model_2 <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor, data=total)
-summary(model_2)
-```
-```{r}
-counts <- table(total$cases_per_100k, total$political_party_governor)
-par(mar=c(8,4,4,4))
-barplot(data = party_cases, main="State Political Party and Cases",
-        ylab = 'Cases per 100K',
-        names.arg=c('Democratic', 'Republican'))
-counts
-```
+#og baseline model
 
+baseline_model <- lm(cases_per_100k ~ `length_ shelter_in_place`, data = total)
+summary(baseline_model)
+```
+```{r}
+#11/16 baseline model re: current research q
+
+party_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor, data=total)
+summary(party_model)
+
+```
 ```{r}
 #filtering to find number of cases in dem and repub states 
 dems <- filter(total, political_party_governor == 'Democratic')
@@ -90,8 +93,42 @@ party_cases<- data.frame(dem_cases, repub_cases)
 ```
 
 
+```{r}
+#making a barplot of cases for total democratic and republican states 
+c1 <- rgb(173,216,230,max = 255, alpha = 200, names = "lt.blue")
+c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
+barplot(c(dem_cases, repub_cases), main="State Political Party and Cases",
+        ylab = 'Cases per 100K',
+        names.arg=c('Democratic', 'Republican'),
+        col = c(c1,c2), ylim=c(0, 80000))
+```
+```{r}
+shelterxparty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + (`length_ shelter_in_place` * political_party_governor), data=total)
+summary(shelterxparty_model)
+coeftest(shelterxparty_model, vcov = vcovHC(shelterxparty_model))
+```
 
 ```{r}
-ggplot(data = party_cases, aes(x= 'Cases', y = c(dem_cases, repub_cases))) + geom_bar(stat='identity'))
+total<- total%>% 
+  mutate(
+    num_mandate_facemask = 
+      ifelse(mandate_facemask == "1899-12-30", 0, 1)
+  )
+```
+
+```{r}
+facemask_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + num_mandate_facemask, data=total)
+summary(facemask_model)
+```
+```{r}
+coeftest(facemask_model, vcov = vcovHC(facemask_model))
+```
+
+```{r, warning=FALSE}
+se.model1 = coeftest(party_model, vcov = vcovHC)[ , "Std. Error"]
+se.model2 = coeftest(shelterxparty_model, vcov = vcovHC)[ , "Std. Error"]
+se.model3 = coeftest(facemask_model, vcov = vcovHC)[ , "Std. Error"]
+
+stargazer(party_model, shelterxparty_model, facemask_model, type = "text", omit.stat = "f", se = list(se.model3), star.cutoffs = c(0.05, 0.01, 0.001), title = "Table 1: The relationship between cases per 100k and state political party")
 ```
 
