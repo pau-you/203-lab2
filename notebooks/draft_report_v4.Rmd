@@ -80,6 +80,7 @@ repub <- filter(total, political_party_governor == 'Republican')
 dem_cases <- sum(dems$cases_per_100k)
 repub_cases <- sum(repub$cases_per_100k)
 party_cases<- data.frame(dem_cases, repub_cases)
+
 ```
 
 
@@ -140,7 +141,6 @@ white <- sum(total$total_cases*as.numeric(na_white_percent_cases))
 black <- sum(total$total_cases*as.numeric(na_black_percent_cases))
 hispanic <- sum(total$total_cases*as.numeric(na_hispanic_percent_cases))
 other <- sum(total$total_cases*as.numeric(na_other_percent_cases))
-
 ```
 
 
@@ -307,16 +307,33 @@ We have homoskedasticity !
 ## Normally Distributed Errors (Assumption 5)
 
 ```{r}
-hist(x_resid$party_model_resid)
+hist(x_resid$party_model_resid, main = "Histogram of Baseline Model Residuals")
+```
+
+```{r}
+qqnorm(x_resid$party_model_resid, main = "Q-Q Plot for Baseline Model Residuals")
+qqline(x_resid$party_model_resid, col = "steelblue", lwd = 2)
 ```
 
 
 ```{r}
-hist(x_resid$poverty_model_resid)
+hist(x_resid$poverty_model_resid, main = "Histogram of Improvement(v1) Model Residuals")
 ```
 
 ```{r}
-hist(x_resid$poverty_model_v2_resid)
+qqnorm(x_resid$poverty_model_resid, main = "Q-Q Plot for Improvement (v1) Model Residuals")
+qqline(x_resid$poverty_model_resid, col = "steelblue", lwd = 2)
+```
+
+```{r}
+#Histogram for Improvement (v2) Model 
+hist(x_resid$poverty_model_v2_resid, main = "Histogram of Improvement (v2) Model Residuals")
+```
+
+```{r}
+#QQ Plot for Improvement (v2) Model 
+qqnorm(x_resid$poverty_model_v2_resid, main = "Q-Q Plot for Improvement (v2) Model Residuals")
+qqline(x_resid$poverty_model_v2_resid, col = "steelblue", lwd = 2)
 ```
 
 We have normally distributed standard errors ! 
