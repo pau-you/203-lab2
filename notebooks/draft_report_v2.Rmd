@@ -20,6 +20,7 @@ library(ggplot2)
 library(sandwich)
 library(lmtest)
 library(stargazer)
+library(patchwork)
 ```
 
 ```{r, warning = FALSE}
@@ -90,11 +91,6 @@ barplot(c(dem_cases, repub_cases), main="State Political Party and Cases",
         ylab = 'Cases per 100K',
         names.arg=c('Democratic', 'Republican'),
         col = c(c1,c2), ylim=c(0, 80000))
-```
-```{r}
-shelterxparty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + (`length_ shelter_in_place` * political_party_governor), data=total)
-summary(shelterxparty_model)
-coeftest(shelterxparty_model, vcov = vcovHC(shelterxparty_model))
 ```
 
 
@@ -177,4 +173,47 @@ stargazer(party_model, poverty_model, poverty_model_v2,
                               'Percent Covid Cases (Hispanic)', 'Percent Covid Cases (Other)'),
           title = "Table 1: Relationship between cases per 100000 and state political party")
 ```
+
+###CLM Assumptions 
+
+##IID Sampling (Assumption 1)
+The data is IID because the reference population sampled was all the people testing for COVID-19 in the United States. It is difficult to determine if there is clustering in the data because we do not have access to data for each individual who tested for COVID-19. However because our research question is concerning state level policies and characteristics we believe that our data is suitable to answer our research question. 
+
+# Linear Conditional Expectation (Assumption 2)
+
+```{r}
+x <- total[-c(12, 19, 27, 32, 33, 35, 44, 49), ]
+```
+
+
+
+```{r}
+
+x_resid <- x %>%  
+  mutate(party_model_resid = resid(party_model),
+         party_model_prediction = predict(party_model),
+         poverty_model_resid = resid(poverty_model),
+         poverty_model_prediction = predict(poverty_model),
+         poverty_model_v2_resid = resid(poverty_model_v2),
+         poverty_model_v2_prediction = predict(poverty_model_v2))
+
+plot_1 <- x_resid %>%  
+  ggplot(aes(x = party_model_prediction, y = party_model_resid)) + 
+  geom_point() + stat_smooth()
+
+plot_2 <- x_resid %>%  
+  ggplot(aes(x = poverty_model_prediction, y = poverty_model_resid)) + 
+  geom_point() + stat_smooth()
+
+plot_3 <- x_resid %>%  
+  ggplot(aes(x = poverty_model_v2_prediction, y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+```
+
+
+
+
+
+
 
