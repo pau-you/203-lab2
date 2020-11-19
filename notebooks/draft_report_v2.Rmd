@@ -101,7 +101,7 @@ coeftest(shelterxparty_model, vcov = vcovHC(shelterxparty_model))
 
 ```{r}
 #Improvement v1
-poverty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + white_percent_totalpop_cases, data=total)
+poverty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases), data=total)
 summary(poverty_model)
 ```
 
@@ -111,8 +111,9 @@ summary(poverty_model)
 ```{r}
 #Improvement v2
 
-poverty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + white_percent_totalpop_cases + as.numeric(black_percent_totalpop_cases) + hispanic_percent_totalpop_cases + other_percent_totalpop_cases, data=total)
-summary(poverty_model)
+poverty_model_v2 <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases) + as.numeric(black_percent_cases) + as.numeric(hispanic_percent_cases) + as.numeric(other_percent_cases), data=total)
+summary(poverty_model_v2)
+#Due to NA's in dataset, the model only includes 43 observations for each variable. Attempts were made to find data to fill in the gaps, but no public data was found for each instance of an NA
 
 ```
 
@@ -156,15 +157,24 @@ c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
 barplot(c(white, black, hispanic, other), main="Cases by Ethnicity",
         ylab = 'Total Cases',
         names.arg=c('White', 'Black', 'Hispanic', 'Other'),
-        col = c(c1,c2,"green", "yellow"), ylim=c(0, 5000000))
+        col = c(c1,c2,"palegreen3", "yellow"), ylim=c(0, 5000000))
 ```
 
 
 ```{r, warning=FALSE}
 se.model1 = coeftest(party_model, vcov = vcovHC)[ , "Std. Error"]
-se.model2 = coeftest(shelterxparty_model, vcov = vcovHC)[ , "Std. Error"]
-se.model3 = coeftest(facemask_model, vcov = vcovHC)[ , "Std. Error"]
+se.model2 = coeftest(poverty_model, vcov = vcovHC)[ , "Std. Error"]
+se.model3 = coeftest(poverty_model_v2, vcov = vcovHC)[ , "Std. Error"]
 
-stargazer(party_model, shelterxparty_model, facemask_model, type = "text", omit.stat = "f", se = list(se.model3), star.cutoffs = c(0.05, 0.01, 0.001), title = "Table 1: The relationship between cases per 100k and state political party")
+stargazer(party_model, poverty_model, poverty_model_v2,
+          type = "text", omit.stat = "f", se = list(se.model3),
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          model.numbers = FALSE,
+          column.labels = c('Baseline', 'Improvement (v1)', 'Improvement (v2)'),
+          dep.var.labels = c('Cases per 100000 Individuals'),
+          covariate.labels = c('Sheltering in Place Period', 'Political Party (Republican)', 'Percent under Poverty Line',
+                              'Percent Covid Cases (White)', "Percent Covid Cases (Black)",
+                              'Percent Covid Cases (Hispanic)', 'Percent Covid Cases (Other)'),
+          title = "Table 1: Relationship between cases per 100000 and state political party")
 ```
 
