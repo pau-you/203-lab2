@@ -1,0 +1,219 @@
+---
+title: "draft_report"
+author: "Hannah, Jeff, Josh Lin, Pauline"
+date: "11/16/2020"
+output: pdf_document
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "../reports/") })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(ggplot2)
+library(sandwich)
+library(lmtest)
+library(stargazer)
+library(patchwork)
+```
+
+```{r, warning = FALSE}
+#combining the two excel sheets 
+d <- read_excel("../data/interim/covid-19_v1.xlsx", sheet = "Covid-19", skip=1)
+reopen <- read_excel("../data/interim/reopen_CUSP.xlsx", sheet = "Reopening")
+total <- merge(d,reopen, by="state")
+```
+
+```{r}
+#make values numeric 
+total$reopen_state_bus = as.numeric(total$reopen_state_bus)
+total$reopen_business_statewide = as.numeric(total$reopen_business_statewide)
+```
+
+
+```{r}
+total$shelter_in_place = excel_numeric_to_date(total$shelter_in_place)
+total$end_shelter_in_place = excel_numeric_to_date(total$end_shelter_in_place)
+total$close_nonessential_business = excel_numeric_to_date(total$close_nonessential_business)
+total$reopen_business_statewide = excel_numeric_to_date(total$reopen_business_statewide)
+total$mandate_facemask = excel_numeric_to_date(total$mandate_facemask)
+total$mandate_facemask_employee = excel_numeric_to_date(total$mandate_facemask_employee)
+total$end_statewide_mandate_facemask = excel_numeric_to_date(total$end_statewide_mandate_facemask)
+
+total$reopen_restaurants = excel_numeric_to_date(total$reopen_restaurants)
+total$reopen_childcare = excel_numeric_to_date(total$reopen_childcare)
+total$reopen_business_statewide = excel_numeric_to_date(as.numeric(total$reopen_business_statewide))
+total$reopen_gyms = excel_numeric_to_date(total$reopen_gyms)
+total$reopen_hair_salons = excel_numeric_to_date(total$reopen_hair_salons)
+total$reopen_movie_theaters = excel_numeric_to_date(total$reopen_movie_theaters)
+total$`reopen_non-essential_retail` = excel_numeric_to_date(total$`reopen_non-essential_retail`)
+total$reopen_religious = excel_numeric_to_date(total$reopen_religious)
+total$reopen_state_bus = excel_numeric_to_date(as.numeric(total$reopen_state_bus))
+total$reopen_bars = excel_numeric_to_date(total$reopen_bars)
+```
+
+```{r}
+write_csv(total, file = "../data/interim/covid19+cusp.csv")
+```
+
+```{r}
+plot(total$`length_ shelter_in_place`, total$cases_per_100k)
+```
+
+```{r}
+#11/16 baseline model re: current research q
+
+party_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor, data=total)
+summary(party_model)
+
+```
+```{r}
+#filtering to find number of cases in dem and repub states 
+dems <- filter(total, political_party_governor == 'Democratic')
+repub <- filter(total, political_party_governor == 'Republican')
+dem_cases <- sum(dems$cases_per_100k)
+repub_cases <- sum(repub$cases_per_100k)
+party_cases<- data.frame(dem_cases, repub_cases)
+```
+
+
+```{r}
+#making a barplot of cases for total democratic and republican states 
+c1 <- rgb(173,216,230,max = 255, alpha = 200, names = "lt.blue")
+c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
+barplot(c(dem_cases, repub_cases), main="State Political Party and Cases",
+        ylab = 'Cases per 100K',
+        names.arg=c('Democratic', 'Republican'),
+        col = c(c1,c2), ylim=c(0, 80000))
+```
+
+
+
+```{r}
+#Improvement v1
+poverty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases), data=total)
+summary(poverty_model)
+```
+
+
+
+
+```{r}
+#Improvement v2
+
+poverty_model_v2 <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases) + as.numeric(black_percent_cases) + as.numeric(hispanic_percent_cases) + as.numeric(other_percent_cases), data=total)
+summary(poverty_model_v2)
+#Due to NA's in dataset, the model only includes 43 observations for each variable. Attempts were made to find data to fill in the gaps, but no public data was found for each instance of an NA
+
+```
+
+
+```{r, warning = FALSE}
+
+#white cases: remove NA and make values numeric 
+total$white_percent_cases[total$white_percent_cases == 'NR'] <- NA
+na_white_percent_cases <- na.omit(as.numeric(total$white_percent_cases))
+
+#black cases: remove NA, make values numeric, replace value of '<0.1' with '0.007' from external data *state = Montana
+total$black_percent_cases[total$black_percent_cases == '<0.1'] <- '0.007'
+total$black_percent_cases[total$black_percent_cases == 'NR'] <- NA
+na_black_percent_cases <- (na.omit(as.numeric(total$black_percent_cases)))
+
+#hispanic cases: remove NA and make values numeric
+total$hispanic_percent_cases[total$hispanic_percent_cases == 'NR'] <- NA
+na_hispanic_percent_cases <- na.omit(as.numeric(total$hispanic_percent_cases))
+
+#other cases: remove Na, make values numeric, replace value of '<0.1' with '0.02' from external data *state = Texas, note = other from external data includes Asian ethnicity only  
+total$other_percent_cases[total$other_percent_cases == '<0.1'] <- '0.02'
+total$other_percent_cases[total$other_percent_cases == 'NR'] <- NA
+na_other_percent_cases <- na.omit(as.numeric(total$other_percent_cases)) 
+
+
+#sum number of cases for each ethnicity 
+white <- sum(total$total_cases*as.numeric(na_white_percent_cases))
+black <- sum(total$total_cases*as.numeric(na_black_percent_cases))
+hispanic <- sum(total$total_cases*as.numeric(na_hispanic_percent_cases))
+other <- sum(total$total_cases*as.numeric(na_other_percent_cases))
+
+```
+
+
+
+```{r}
+#making a barplot of cases for cases by ethnicity 
+c1 <- rgb(173,216,230,max = 255, alpha = 200, names = "lt.blue")
+c2 <- rgb(255,192,203, max = 255, alpha = 80, names = "lt.pink")
+
+barplot(c(white, black, hispanic, other), main="Cases by Ethnicity",
+        ylab = 'Total Cases',
+        names.arg=c('White', 'Black', 'Hispanic', 'Other'),
+        col = c(c1,c2,"palegreen3", "yellow"), ylim=c(0, 5000000))
+```
+
+
+```{r, warning=FALSE}
+se.model1 = coeftest(party_model, vcov = vcovHC)[ , "Std. Error"]
+se.model2 = coeftest(poverty_model, vcov = vcovHC)[ , "Std. Error"]
+se.model3 = coeftest(poverty_model_v2, vcov = vcovHC)[ , "Std. Error"]
+
+stargazer(party_model, poverty_model, poverty_model_v2,
+          type = "text", omit.stat = "f", se = list(se.model3),
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          model.numbers = FALSE,
+          column.labels = c('Baseline', 'Improvement (v1)', 'Improvement (v2)'),
+          dep.var.labels = c('Cases per 100000 Individuals'),
+          covariate.labels = c('Sheltering in Place Period', 'Political Party (Republican)', 'Percent under Poverty Line',
+                              'Percent Covid Cases (White)', "Percent Covid Cases (Black)",
+                              'Percent Covid Cases (Hispanic)', 'Percent Covid Cases (Other)'),
+          title = "Table 1: Relationship between cases per 100000 and state political party")
+```
+
+###CLM Assumptions 
+
+##IID Sampling (Assumption 1)
+The data is IID because the reference population sampled was all the people testing for COVID-19 in the United States. It is difficult to determine if there is clustering in the data because we do not have access to data for each individual who tested for COVID-19. However because our research question is concerning state level policies and characteristics we believe that our data is suitable to answer our research question. 
+
+# Linear Conditional Expectation (Assumption 2)
+
+```{r}
+x <- total[-c(12, 19, 27, 32, 33, 35, 44, 49), ]
+```
+
+
+
+```{r}
+
+x_resid <- x %>%  
+  mutate(party_model_resid = resid(party_model),
+         party_model_prediction = predict(party_model),
+         poverty_model_resid = resid(poverty_model),
+         poverty_model_prediction = predict(poverty_model),
+         poverty_model_v2_resid = resid(poverty_model_v2),
+         poverty_model_v2_prediction = predict(poverty_model_v2))
+
+plot_1 <- x_resid %>%  
+  ggplot(aes(x = party_model_prediction, y = party_model_resid)) + 
+  geom_point() + stat_smooth()
+
+plot_2 <- x_resid %>%  
+  ggplot(aes(x = poverty_model_prediction, y = poverty_model_resid)) + 
+  geom_point() + stat_smooth()
+
+plot_3 <- x_resid %>%  
+  ggplot(aes(x = poverty_model_v2_prediction, y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+```
+
+
+
+
+
+
+
