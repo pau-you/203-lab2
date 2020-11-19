@@ -25,7 +25,7 @@ library(patchwork)
 
 ```{r, warning = FALSE}
 #combining the two excel sheets 
-d <- read_excel("../data/interim/covid-19_v1.xlsx", sheet = "Covid-19", skip=1)
+d <- read_excel("../data/interim/covid-19_v2.xlsx", sheet = "Covid-19", skip=1)
 reopen <- read_excel("../data/interim/reopen_CUSP.xlsx", sheet = "Reopening")
 total <- merge(d,reopen, by="state")
 ```
@@ -69,7 +69,7 @@ plot(total$`length_ shelter_in_place`, total$cases_per_100k)
 ```{r}
 #11/16 baseline model re: current research q
 
-party_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor, data=total)
+party_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor, data=x)
 summary(party_model)
 
 ```
@@ -97,7 +97,7 @@ barplot(c(dem_cases, repub_cases), main="State Political Party and Cases",
 
 ```{r}
 #Improvement v1
-poverty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases), data=total)
+poverty_model <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases), data=x)
 summary(poverty_model)
 ```
 
@@ -107,7 +107,7 @@ summary(poverty_model)
 ```{r}
 #Improvement v2
 
-poverty_model_v2 <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases) + as.numeric(black_percent_cases) + as.numeric(hispanic_percent_cases) + as.numeric(other_percent_cases), data=total)
+poverty_model_v2 <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases) + as.numeric(black_percent_cases) + as.numeric(hispanic_percent_cases) + as.numeric(other_percent_cases), data=x)
 summary(poverty_model_v2)
 #Due to NA's in dataset, the model only includes 43 observations for each variable. Attempts were made to find data to fill in the gaps, but no public data was found for each instance of an NA
 
@@ -211,9 +211,112 @@ plot_3 <- x_resid %>%
 
 ```
 
+```{r} 
+plot_1
+```
+
+
+```{r}
+plot_2
+```
 
 
 
+```{r}
+plot_3
+```
+
+## Consequences of a non-linear conditional expectation
+
+The model you have fitted that assumes the data is linear and the model you have fitted is still the best **linear** predictor. However, the estimated coefficient does not match the relationship in the data. This means that: 
+  1. There are other families of nonlinear models that are more efficient
+  2. Linear relationships don't *fully* model the complexity of the data
+  3. Prediction (and inference) can be improved with more complexity
+  
+  
+```{r}
+summary(party_model)
+summary(poverty_model)
+summary(poverty_model_v2)
+```
+
+
+```{r}
+poverty_model_v2
+```
+  
+
+```{r}
+summary(lm(cases_per_100k ~ `length_ shelter_in_place`, data = x))
+  
+summary(lm(cases_per_100k ~ political_party_governor, data = x))
+
+summary(lm(cases_per_100k ~ percent_povertyline_2018, data = x))
+
+summary(lm(cases_per_100k ~ as.numeric(white_percent_cases), data = x))
+
+summary(lm(cases_per_100k ~ as.numeric(black_percent_cases), data = x))
+
+summary(lm(cases_per_100k ~ as.numeric(hispanic_percent_cases), data = x))
+
+summary(lm(cases_per_100k ~ as.numeric(other_percent_cases), data = x))
+
+  
+```
+
+
+We do not have colinearity!! Woo 
+
+
+# Homoskedastic Conditional Variance (Assumption 4)
+
+Ocular test
+```{r}
+plot_4 <- x_resid %>%  
+  ggplot(aes(x = party_model_prediction, y = party_model_resid)) + 
+  geom_point() + geom_hline(yintercept = mean(x_resid$party_model_resid))
+
+plot_5 <- x_resid %>%  
+  ggplot(aes(x = poverty_model_prediction, y = poverty_model_resid)) + 
+  geom_point() + geom_hline(yintercept = mean(x_resid$poverty_model_resid))
+
+plot_6 <- x_resid %>%  
+  ggplot(aes(x = poverty_model_v2_prediction, y = poverty_model_v2_resid)) + 
+  geom_point() + geom_hline(yintercept = mean(x_resid$poverty_model_v2_resid))
+
+```
+
+
+```{r}
+plot_4
+```
+
+```{r}
+plot_5
+```
+
+```{r}
+plot_6
+```
+
+
+We have homoskedasticity !
 
 
 
+## Normally Distributed Errors (Assumption 5)
+
+```{r}
+hist(x_resid$party_model_resid)
+```
+
+
+```{r}
+hist(x_resid$poverty_model_resid)
+```
+
+```{r}
+hist(x_resid$poverty_model_v2_resid)
+```
+
+We have normally distributed standard errors ! 
