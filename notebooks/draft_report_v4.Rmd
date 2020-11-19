@@ -31,13 +31,14 @@ total <- merge(d,reopen, by="state")
 ```
 
 ```{r}
-#make values numeric 
+#make values numeric due to formatting issues in excel
 total$reopen_state_bus = as.numeric(total$reopen_state_bus)
 total$reopen_business_statewide = as.numeric(total$reopen_business_statewide)
 ```
 
 
 ```{r}
+#reformat numeric values as dates using janitor::excel_numeric_to_date
 total$shelter_in_place = excel_numeric_to_date(total$shelter_in_place)
 total$end_shelter_in_place = excel_numeric_to_date(total$end_shelter_in_place)
 total$close_nonessential_business = excel_numeric_to_date(total$close_nonessential_business)
@@ -59,11 +60,17 @@ total$reopen_bars = excel_numeric_to_date(total$reopen_bars)
 ```
 
 ```{r}
+#Save data as csv into github
 write_csv(total, file = "../data/interim/covid19+cusp.csv")
 ```
 
 ```{r}
 plot(total$`length_ shelter_in_place`, total$cases_per_100k)
+```
+
+```{r}
+#remove states with NA values within the columns for percent cases by ethnicity (these variables are used in our third model down below)
+x <- total[-c(12, 19, 32, 33, 35, 49), ]
 ```
 
 ```{r}
@@ -110,7 +117,7 @@ summary(poverty_model)
 
 poverty_model_v2 <- lm(cases_per_100k ~ `length_ shelter_in_place` + political_party_governor + percent_povertyline_2018 + as.numeric(white_percent_cases) + as.numeric(black_percent_cases) + as.numeric(hispanic_percent_cases) + as.numeric(other_percent_cases), data=x)
 summary(poverty_model_v2)
-#Due to NA's in dataset, the model only includes 43 observations for each variable. Attempts were made to find data to fill in the gaps, but no public data was found for each instance of an NA
+#Due to NA's in dataset, the model only includes 45 observations for each variable. Attempts were made to find data to fill in the gaps, but no public data was found for each instance, except for Montana and Texas
 
 ```
 
@@ -181,11 +188,6 @@ The data is IID because the reference population sampled was all the people test
 
 # Linear Conditional Expectation (Assumption 2)
 
-```{r}
-x <- total[-c(12, 19, 27, 32, 33, 35, 44, 49), ]
-```
-
-
 
 ```{r}
 
@@ -197,33 +199,95 @@ x_resid <- x %>%
          poverty_model_v2_resid = resid(poverty_model_v2),
          poverty_model_v2_prediction = predict(poverty_model_v2))
 
-plot_1 <- x_resid %>%  
+model1_plot_1 <- x_resid %>%  
+  ggplot(aes(x = `length_ shelter_in_place`, y = party_model_resid)) + 
+  geom_point() + stat_smooth()
+
+model1_plot_2 <- x_resid %>%  
+  ggplot(aes(x = `political_party_governor`, y = party_model_resid)) + 
+  geom_point() + stat_smooth()
+
+model1_plot_3 <- x_resid %>%  
   ggplot(aes(x = party_model_prediction, y = party_model_resid)) + 
   geom_point() + stat_smooth()
 
-plot_2 <- x_resid %>%  
+```
+
+```{r}
+model1_plot_1 | model1_plot_2 | model1_plot_3
+```
+
+```{r}
+
+model2_plot_1 <- x_resid %>%  
+  ggplot(aes(x = `length_ shelter_in_place`, y = poverty_model_resid)) + 
+  geom_point() + stat_smooth()
+
+model2_plot_2 <- x_resid %>%  
+  ggplot(aes(x = `political_party_governor`, y = poverty_model_resid)) + 
+  geom_point() + stat_smooth()
+
+model2_plot_3 <- x_resid %>%  
+  ggplot(aes(x = percent_povertyline_2018, y = poverty_model_resid)) + 
+  geom_point() + stat_smooth()
+
+model2_plot_4 <- x_resid %>%  
+  ggplot(aes(x = as.numeric(white_percent_cases), y = poverty_model_resid)) + 
+  geom_point() + stat_smooth()
+
+model2_plot_5 <- x_resid %>%  
   ggplot(aes(x = poverty_model_prediction, y = poverty_model_resid)) + 
   geom_point() + stat_smooth()
 
-plot_3 <- x_resid %>%  
+```
+
+```{r}
+model2_plot_1 | model2_plot_2
+model2_plot_3 | model2_plot_4
+model2_plot_5
+```
+
+
+```{r}
+model3_plot_1 <- x_resid %>%  
+  ggplot(aes(x = `length_ shelter_in_place`, y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+model3_plot_2 <- x_resid %>%  
+  ggplot(aes(x = `political_party_governor`, y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+model3_plot_3 <- x_resid %>%  
+  ggplot(aes(x = percent_povertyline_2018, y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+model3_plot_4 <- x_resid %>%  
+  ggplot(aes(x = as.numeric(white_percent_cases), y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+model3_plot_5 <- x_resid %>%  
+  ggplot(aes(x = as.numeric(black_percent_cases), y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+  
+model3_plot_6 <- x_resid %>%  
+  ggplot(aes(x = as.numeric(hispanic_percent_cases), y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+model3_plot_7 <- x_resid %>%  
+  ggplot(aes(x = as.numeric(other_percent_cases), y = poverty_model_v2_resid)) + 
+  geom_point() + stat_smooth()
+
+model3_plot_8 <- x_resid %>%  
   ggplot(aes(x = poverty_model_v2_prediction, y = poverty_model_v2_resid)) + 
   geom_point() + stat_smooth()
 
 ```
 
-```{r} 
-plot_1
-```
-
-
 ```{r}
-plot_2
-```
-
-
-
-```{r}
-plot_3
+model3_plot_1 | model3_plot_2
+model3_plot_3 | model3_plot_4
+model3_plot_5 | model3_plot_6
+model3_plot_7 | model3_plot_8
 ```
 
 ## Consequences of a non-linear conditional expectation
@@ -240,10 +304,6 @@ summary(poverty_model)
 summary(poverty_model_v2)
 ```
 
-
-```{r}
-poverty_model_v2
-```
   
 
 ```{r}
