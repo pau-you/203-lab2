@@ -34,4 +34,4 @@ total$reopen_state_bus = excel_numeric_to_date(as.numeric(total$reopen_state_bus
 total$reopen_bars = excel_numeric_to_date(total$reopen_bars)
 
 #Save data as csv into github
-write_csv(total, file = "../data/interim/covid19+cusp.csv")
+write_csv(total, file = "../../data/interim/covid19+cusp.csv")
