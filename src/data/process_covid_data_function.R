@@ -10,6 +10,10 @@ setwd("~/2020-2021 School Year/w203/lab_2-gogurt/src/data")
 d <- read_excel("../../data/interim/covid-19_v2.xlsx", sheet = "Covid-19", skip=1)
 reopen <- read_excel("../../data/interim/reopen_CUSP.xlsx", sheet = "Reopening")
 total <- merge(d,reopen, by="state")
+total <- total %>% 
+  rename(
+    length_shelter_in_place = `length_ shelter_in_place`
+  )
 
 #make values numeric due to formatting issues in excel
 total$reopen_state_bus = as.numeric(total$reopen_state_bus)
