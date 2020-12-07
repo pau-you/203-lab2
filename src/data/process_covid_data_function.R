@@ -1,7 +1,10 @@
 #R file to process covid-19 data for lab 2
+library(tidyverse)
 library(readxl)
 library(janitor)
 library(sandwich)
+
+setwd("~/2020-2021 School Year/w203/lab_2-gogurt/src/data")
 
 
 d <- read_excel("../../data/interim/covid-19_v2.xlsx", sheet = "Covid-19", skip=1)
@@ -32,6 +35,9 @@ total$`reopen_non-essential_retail` = excel_numeric_to_date(total$`reopen_non-es
 total$reopen_religious = excel_numeric_to_date(total$reopen_religious)
 total$reopen_state_bus = excel_numeric_to_date(as.numeric(total$reopen_state_bus))
 total$reopen_bars = excel_numeric_to_date(total$reopen_bars)
+
+#Remove rows with missing data
+total <- total[-c(12, 19, 32, 33, 35, 49), ]
 
 #Save data as csv into github
 write_csv(total, file = "../../data/interim/covid19+cusp.csv")
