@@ -56,26 +56,18 @@ However, there were several instances of data missing from 6 states about COVID-
 Once we decided to look at the length of shelter in place as one of our main independent variables, we created a scatterplot of length of shelter in place and the number of cases per 100,000 in order to observe if there is a relationship between these two variables. 
 
 ```{r Plot Length Shelter in Place vs Cases per 100k}
-plot(total$`length_ shelter_in_place`, 
+plot(total$`length_shelter_in_place`, 
      total$cases_per_100k,
      xlab = 'Length of shelter in place (days)',
      ylab = 'Cases per 100k people',
      main = 'Length of shelter in place vs. cases per 100k')
 ```
 
-```{r, tidy=TRUE}
-#remove states with NA values within the columns for percent cases by ethnicity (these variables are used in our third model down below)
-total <- total %>% filter(white_percent_cases != "NR",
-                 black_percent_cases != "NR",
-                 hispanic_percent_cases != "NR",
-                 other_percent_cases != "NR")
-#x <- total[-c(12, 19, 32, 33, 35, 49), ]
-```
 
 ```{r Baseline Model, tidy=TRUE}
 
 party_model <- lm(cases_per_100k ~ length_shelter_in_place + political_party_governor, 
-                  data=x)
+                  data=total)
 summary(party_model)
 
 ```
@@ -119,7 +111,7 @@ barplot(c(dem_cases, repub_cases), main="State Political Party and Cases",
 
 ```{r Improvement Model V1, tidy=TRUE}
 poverty_model <- lm(cases_per_100k ~ length_shelter_in_place + political_party_governor + 
-                      percent_povertyline_2018 + as.numeric(white_percent_cases), data=x)
+                      percent_povertyline_2018 + as.numeric(white_percent_cases), data=total)
 summary(poverty_model)
 
 ```
@@ -133,7 +125,7 @@ For our Improvement v1 model, we added 2 additional features: the percent of the
 
 poverty_model_v2 <- lm(cases_per_100k ~ length_shelter_in_place + political_party_governor + 
                          percent_povertyline_2018 + as.numeric(white_percent_cases) + 
-                         as.numeric(black_percent_cases) + as.numeric(hispanic_percent_cases) + as.numeric(other_percent_cases), data=x)
+                         as.numeric(black_percent_cases) + as.numeric(hispanic_percent_cases) + as.numeric(other_percent_cases), data=total)
 summary(poverty_model_v2)
 #Due to NA's in dataset, the model only includes 45 observations for each variable. Attempts were made to find data to fill in the gaps, but no public data was found for each instance, except for Montana and Texas
 
@@ -150,26 +142,9 @@ There were 2 states, Montana and Texas, which had values of "<0.1" for the perce
 All values in the percentage cases by ethnicity variables had to be converted to numeric values, as they were in character format from the Excel sheet where the data was pulled from. 
 
 
+
+
 ```{r Percent Cases by Ethnicity, warning = FALSE, tidy=TRUE}
-
-#white cases: remove NA and make values numeric 
-total$white_percent_cases[total$white_percent_cases == 'NR'] <- NA
-na_white_percent_cases <- na.omit(as.numeric(total$white_percent_cases))
-
-#black cases: remove NA, make values numeric, replace value of '<0.1' with '0.007' from external data *state = Montana
-total$black_percent_cases[total$black_percent_cases == '<0.1'] <- '0.007'
-total$black_percent_cases[total$black_percent_cases == 'NR'] <- NA
-na_black_percent_cases <- (na.omit(as.numeric(total$black_percent_cases)))
-
-#hispanic cases: remove NA and make values numeric
-total$hispanic_percent_cases[total$hispanic_percent_cases == 'NR'] <- NA
-na_hispanic_percent_cases <- na.omit(as.numeric(total$hispanic_percent_cases))
-
-#other cases: remove Na, make values numeric, replace value of '<0.1' with '0.02' from external data *state = Texas, note = other from external data includes Asian ethnicity only  
-total$other_percent_cases[total$other_percent_cases == '<0.1'] <- '0.02'
-total$other_percent_cases[total$other_percent_cases == 'NR'] <- NA
-na_other_percent_cases <- na.omit(as.numeric(total$other_percent_cases)) 
-
 
 #sum number of cases for each ethnicity 
 white <- (sum(total$total_cases*as.numeric(na_white_percent_cases)) / sum(total$total_cases))*100
@@ -177,7 +152,6 @@ black <- (sum(total$total_cases*as.numeric(na_black_percent_cases)) / sum(total$
 hispanic <- (sum(total$total_cases*as.numeric(na_hispanic_percent_cases)) / sum(total$total_cases))*100
 other <- (sum(total$total_cases*as.numeric(na_other_percent_cases)) / sum(total$total_cases))*100
 
-white
 ```
 
 In order to visualize the difference in percentage of cases by each ethnicity, we created a bar plot comparing each group. To visualize the total number of cases by ethnicity, we multiplied the number of total cases per state by the percentage of cases per state for each ethnicity group. The number of cases for the white, black, hispanic, and "other" populations were 4467323, 1323546, 2536099, and 745397.2 respectively. The white population had over 3 times the number of cases that the black population had, as well as 6 times the "other" population. Although white Americans have the highest percentage of cases, our models are still practically significant because they are the racial majority in the country.  
@@ -201,7 +175,7 @@ The data is not IID because the data was collected by state which clusters data 
 
 ```{r Linear Conditional Expectation Baseline Model}
 
-x_resid <- x %>%  
+x_resid <- total %>%  
   mutate(party_model_resid = resid(party_model),
          party_model_prediction = predict(party_model),
          poverty_model_resid = resid(poverty_model),
@@ -213,10 +187,6 @@ model1_plot_1 <- x_resid %>%
   ggplot(aes(x = length_shelter_in_place, y = party_model_resid)) + 
   geom_point() + stat_smooth()
 
-model1_plot_2 <- x_resid %>%  
-  ggplot(aes(x = `political_party_governor`, y = party_model_resid)) + 
-  geom_point() + stat_smooth()
-
 model1_plot_3 <- x_resid %>%  
   ggplot(aes(x = party_model_prediction, y = party_model_resid)) + 
   geom_point() + stat_smooth()
@@ -224,20 +194,11 @@ model1_plot_3 <- x_resid %>%
 ```
 
 ```{r Plotting Linear Conditional Expectation Together Baseline Model}
-model1_plot_1 | model1_plot_2
-model1_plot_3
+model1_plot_1 | model1_plot_3
 ```
-For our first model, it seems that our model may have nonlinear conditional expectation. Looking at the plots for each feature as well as the predictions, it seems that our model tends to underestimate the actual values in the dataset. It was also difficult to analyze linear conditional expectation for the party affiliation feature due to the variable's descriptive nature. However, as the baseline model only includes our key variables and does not account for additional covariates that could help improve the model, we feel that we can still learn from our model, particularly the relationship between the length of the sheltering in place mandate in each state and the rate of cases per 100,000 individuals in each state.
+For our first model, it seems that our model may have nonlinear conditional expectation. Looking at the plots for each feature as well as the predictions, it seems that our model tends to underestimate the actual values in the dataset. We did not analyze linear conditional expectation for the party affiliation feature due to the variable's descriptive nature. However, as the baseline model only includes our key variables and does not account for additional covariates that could help improve the model, we feel that we can still learn from our model, particularly the relationship between the length of the sheltering in place mandate in each state and the rate of cases per 100,000 individuals in each state.
 
 ```{r Linear Conditional Expectation Together Improvement Model 1}
-
-model2_plot_1 <- x_resid %>%  
-  ggplot(aes(x = length_shelter_in_place, y = poverty_model_resid)) + 
-  geom_point() + stat_smooth()
-
-model2_plot_2 <- x_resid %>%  
-  ggplot(aes(x = `political_party_governor`, y = poverty_model_resid)) + 
-  geom_point() + stat_smooth()
 
 model2_plot_3 <- x_resid %>%  
   ggplot(aes(x = percent_povertyline_2018, y = poverty_model_resid)) + 
@@ -254,28 +215,12 @@ model2_plot_5 <- x_resid %>%
 ```
 
 ```{r Plotting Linear Conditional Expectation Together Improvement Model V1}
-model2_plot_1 | model2_plot_2
 model2_plot_3 | model2_plot_4
 model2_plot_5
 ```
 For our second model, we appear to approach linear conditional expectation with the inclusion of new variables, percentage of the population under the poverty line and the rate of covid-19 cases among the white population across each state. The new features appear relatively linear, and the distribution of the residuals versus the predictions also appears relatively linear. This indicates an improvement in our model compared to the baseline model.
 
 ```{r Linear Conditional Expectation Together Improvement Model V2}
-model3_plot_1 <- x_resid %>%  
-  ggplot(aes(x = length_shelter_in_place, y = poverty_model_v2_resid)) + 
-  geom_point() + stat_smooth()
-
-model3_plot_2 <- x_resid %>%  
-  ggplot(aes(x = `political_party_governor`, y = poverty_model_v2_resid)) + 
-  geom_point() + stat_smooth()
-
-model3_plot_3 <- x_resid %>%  
-  ggplot(aes(x = percent_povertyline_2018, y = poverty_model_v2_resid)) + 
-  geom_point() + stat_smooth()
-
-model3_plot_4 <- x_resid %>%  
-  ggplot(aes(x = as.numeric(white_percent_cases), y = poverty_model_v2_resid)) + 
-  geom_point() + stat_smooth()
 
 model3_plot_5 <- x_resid %>%  
   ggplot(aes(x = as.numeric(black_percent_cases), y = poverty_model_v2_resid)) + 
@@ -296,8 +241,7 @@ model3_plot_8 <- x_resid %>%
 ```
 
 ```{r Plotting Linear Conditional Expectation Together Improvement Model V2}
-model3_plot_1 | model3_plot_2
-model3_plot_3 | model3_plot_4
+
 model3_plot_5 | model3_plot_6
 model3_plot_7 | model3_plot_8
 ```
