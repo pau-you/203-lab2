@@ -23,50 +23,14 @@ library(stargazer)
 library(patchwork)
 ```
 
-```{r Loading Data, warning = FALSE}
+```{r Loading Data, message = FALSE, warning = FALSE}
 total <- read_csv("../data/interim/covid19+cusp.csv", col_names=TRUE)
-total %>% 
+total <- total %>% 
   rename(
     length_shelter_in_place = `length_ shelter_in_place`
     )
 
 ```
-
-```{r}
-#make values numeric due to formatting issues in excel
-total$reopen_state_bus = as.numeric(total$reopen_state_bus)
-total$reopen_business_statewide = as.numeric(total$reopen_business_statewide)
-
-```
-
-
-```{r, tidy =TRUE}
-#reformat numeric values as dates using janitor::excel_numeric_to_date
-total$shelter_in_place = excel_numeric_to_date(total$shelter_in_place)
-total$end_shelter_in_place = excel_numeric_to_date(total$end_shelter_in_place)
-total$close_nonessential_business = excel_numeric_to_date(total$close_nonessential_business)
-total$reopen_business_statewide = excel_numeric_to_date(total$reopen_business_statewide)
-total$mandate_facemask = excel_numeric_to_date(total$mandate_facemask)
-total$mandate_facemask_employee = excel_numeric_to_date(total$mandate_facemask_employee)
-total$end_statewide_mandate_facemask = excel_numeric_to_date(total$end_statewide_mandate_facemask)
-
-total$reopen_restaurants = excel_numeric_to_date(total$reopen_restaurants)
-total$reopen_childcare = excel_numeric_to_date(total$reopen_childcare)
-total$reopen_business_statewide = excel_numeric_to_date(as.numeric(total$reopen_business_statewide))
-total$reopen_gyms = excel_numeric_to_date(total$reopen_gyms)
-total$reopen_hair_salons = excel_numeric_to_date(total$reopen_hair_salons)
-total$reopen_movie_theaters = excel_numeric_to_date(total$reopen_movie_theaters)
-total$`reopen_non-essential_retail` = excel_numeric_to_date(total$`reopen_non-essential_retail`)
-total$reopen_religious = excel_numeric_to_date(total$reopen_religious)
-total$reopen_state_bus = excel_numeric_to_date(as.numeric(total$reopen_state_bus))
-total$reopen_bars = excel_numeric_to_date(total$reopen_bars)
-```
-
-```{r, include=FALSE}
-#Save data as csv into github
-write_csv(total, file = "../data/interim/covid19+cusp.csv")
-```
-
 ## Introduction 
 
 Since the onset of covid-19 last December, the disease has fundamentally shaken up the United States, as the US now leads the world in total number of cases and deaths. By the end of October, there were a total of 8,852,730 recorded cases and a total of 227,178 deaths. Due to the far reaching effects in the US, there have been many questions regarding what policies and individual practices help limit the spread of the disease. However, such broad questions fail to account for the unique characteristics of each state, especially when politics come into play. This discrepancy brings us to our research question.
@@ -101,7 +65,11 @@ plot(total$`length_ shelter_in_place`,
 
 ```{r, tidy=TRUE}
 #remove states with NA values within the columns for percent cases by ethnicity (these variables are used in our third model down below)
-x <- total[-c(12, 19, 32, 33, 35, 49), ]
+total <- total %>% filter(white_percent_cases != "NR",
+                 black_percent_cases != "NR",
+                 hispanic_percent_cases != "NR",
+                 other_percent_cases != "NR")
+#x <- total[-c(12, 19, 32, 33, 35, 49), ]
 ```
 
 ```{r Baseline Model, tidy=TRUE}
