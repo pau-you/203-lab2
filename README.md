@@ -1,4 +1,4 @@
-lab_2
+Correlation between Policy and Covid-19 Cases
 ==============================
 
 The final project for MIDS w203: an exploration of the features that cause increased or decreased state-level COVID cases. 
